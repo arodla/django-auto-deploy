@@ -57,7 +57,9 @@ fi
 
 # Creating the working directory
 HOMEDIR=${ROOTDIR}${SITENAME}
+VENVDIR=${ROOTDIR}envs/${SITENAME}
 mkdir -p /var/www/$SITENAME
+mkdir -p /var/www/envs/$SITENAME
 
 # Create a new Linux user and add it to sftp group
 echo "Creating user $SITENAME..."
@@ -78,10 +80,10 @@ apt install -y nginx python3-pip $DBPACKAGE libmysqlclient-dev &> $HOMEDIR/deplo
 pip3 install virtualenv >> $HOMEDIR/deploy.log
 
 # Setup Python virtual environment, Django, Gunicorn, and Python MySQL connector
-mkdir -p $HOMEDIR/env 
+
 echo "Trying to set up a virtual environment..."
-virtualenv -p python3 $HOMEDIR/env >> $HOMEDIR/deploy.log
-source $HOMEDIR/env/bin/activate
+virtualenv -p python3 $VENVDIR/env >> $HOMEDIR/deploy.log
+source $VENVDIR/env/bin/activate
 pip install gunicorn django $DBCONNECTOR >> $HOMEDIR/deploy.log
 cd ${HOMEDIR}
 django-admin startproject app .
@@ -136,7 +138,7 @@ After=network.target
 User=$USER
 Group=www-data
 WorkingDirectory=${HOMEDIR}
-ExecStart=$HOMEDIR/env/bin/gunicorn --access-logfile - --workers 3 --bind unix:/run/gunicorn_$SITENAME.sock app.wsgi:application
+ExecStart=$VENVDIR/env/bin/gunicorn --access-logfile - --workers 3 --bind unix:/run/gunicorn_$SITENAME.sock app.wsgi:application
 
 [Install]
 WantedBy=multi-user.target
@@ -167,7 +169,7 @@ if [[ $DBPACKAGE != "" ]]; then
 fi
 
 # activate Python virtual environment
-source $HOMEDIR/env/bin/activate
+source $VENVDIR/env/bin/activate
 
 # configure static folder
 echo 'STATIC_ROOT = os.path.join(BASE_DIR, "static")
@@ -188,7 +190,7 @@ SFTP password: $SFTPPASS
 
 Things to do:
 Go to the working directory: cd $HOMEDIR
-Activate virtual environment: source $HOMEDIR/env/bin/activate
+Activate virtual environment: source $VENVDIR/env/bin/activate
 Create Django super user: ./manage.py createsuperuser
 Apply migrations: ./manage.py makemigrations && ./manage.py migrate
 "
